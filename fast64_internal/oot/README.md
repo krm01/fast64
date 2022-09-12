@@ -71,17 +71,36 @@ To import a skeletal mesh, just click "Import" for the armature importer. You ma
 ![](/images/oot_imported_gerudo_textured.png)
 ![](/images/oot_imported_gerudo_solid.png)
 
+1. Certain colors are white/different: Some graphical effects are achieved through dynamic Gfx commands, such as tinting white textures. These effects will not be imported.
+2. Strange imported normals: Due to the behaviour of rotating vertices on a skinned triangle that differs between Blender and the N64, normals may look strange. Note that these normals will look correct if re exported back into the game (assuming the rest pose is not changed).
 
-1. Eye/face textures are black: Texture pointers which are set dynamically will not be imported. Instead, the name of the pointer will be used instead of the actual data.
-2. Certain colors are white/different: Some graphical effects are achieved through dynamic Gfx commands, such as tinting white textures. These effects will not be imported.
-3. Strange imported normals: Due to the behaviour of rotating vertices on a skinned triangle that differs between Blender and the N64, normals may look strange. Note that these normals will look correct if re exported back into the game (assuming the rest pose is not changed).
-
-Note that rest pose rotations are zeroed out on export, so you can modify the rest pose of imported armature while still preserving its structure. You can do this by using the "Apply As Rest Pose" operator under the Fast64 tab. Note that imported animations however still require the imported rest pose to work correctly.
+Note that rest pose rotations are zeroed out on export, so you can modify the rest pose of imported armature while still preserving its structure. You can do this by using the "Apply As Rest Pose" operator under the Fast64 tab or the OOT Skeleton Exporter section. Note that imported animations however still require the imported rest pose to work correctly.
 
 There may also be an issue where some meshes import completely black due to the assumption that the F3D cycle mode is set to 2-Cycle, when it should really be 1-Cycle. Try changing the cycle type to 1-Cycle in cases where a dynamic texture pointer is not expected.
 
 To import an animation, select the armature the animation belongs to then click "Import" on the animation importer.
 To export an animation, select an armature and click "Export", which will export the active animation of the armature.
+
+### Custom Skeleton Mesh Process
+1. Import the character you want to modify.
+    - Skeleton: The name of the skeleton struct, of type FlexSkeletonHeader or SkeletonHeader. Usually found in the object files.
+    - Object: The "asset group" the skeleton belongs to. The name will be from "assets/objects/\<name\>/"
+    - Overlay: The location of the actor code, if necessary. The name will be from "src/overlays/actors/\<name\>/"
+2. Put it into a suitable rest pose, then click the "Apply As Rest Pose" button at the bottom of the OOT Skeleton Exporter section to apply it. It helps to import an existing animation to see how a good rest pose would look like.
+    - Animation Header Name: struct of type AnimationHeader or LinkAnimationHeader, found in the object files.
+3. Replace the existing mesh with your own.
+4. Export the skeleton back into the game. It is not necessary to re-fold the armature before export.
+5. If "Replace Vanilla Headers On Export" is enabled, then any reference conflicts should be removed.
+6. In the actor header file, (in src/overlays/actors/\<name\>/), set the joint/morph table sizes to be (number of bones + 1)
+7. In the actor source file, this value should also be used for the limbCount argument in SkelAnime_InitFlex().
+
+### Flipbook Textures
+Many actors in OOT will animate textures through code using a flipbook method, like with Link's eyes/mouth. A flipbook material will use a texture reference pointing to an address formatted as 0x0?000000. You can find the flipbook texture frames in the material properties tab underneath the dynamic material section. 
+![](/images/oot_flipbook.png)
+On import, Fast64 will try to read the provided actors code for flipbook textures. On export, Fast64 will try to modify texture arrays used for flipbook textures.
+
+For Link, the eyes/mouth materials use flipbook textures. For Link animations you can animate these flipbook indices in the Link Animation Inspector, located in the object properties tab for an armature object. Note that the 0 index is reserved for the "auto" setting, and that flipbook texture indices start at 1.
+![](/images/oot_link_texture_anim.png)
 
 ### Creating a Cutscene
 **Creating the cutscene itself:**

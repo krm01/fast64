@@ -1,3 +1,4 @@
+from typing import Union
 import bmesh, bpy, mathutils, pprint, re, math, traceback
 from bpy.utils import register_class, unregister_class
 from .f3d_gbi import *
@@ -6,6 +7,7 @@ from .f3d_material import (
     update_preset_manual,
     all_combiner_uses,
     ootEnumDrawLayers,
+    TextureProperty,
 )
 from .f3d_writer import BufferVertex
 from ..utility import *
@@ -442,6 +444,12 @@ def convertF3DUV(value, maxSize):
     return ((int.from_bytes(valueBytes, "big", signed=True) / 32) + 0.5) / (maxSize if maxSize > 0 else 1)
 
 
+class F3DTextureReference:
+    def __init__(self, name, width):
+        self.name = name
+        self.width = width
+
+
 class F3DParsedCommands:
     def __init__(self, name, commands, index):
         self.name = name
@@ -516,6 +524,25 @@ class F3DContext:
         self.lights.a = Ambient([0, 0, 0])
         self.numLights = 0
         self.lightData = {}  # (color, normal) : list of blender light objects
+
+    # restarts context, but keeps cached materials/textures
+    def clearGeometry(self):
+        self.vertexBuffer = [None] * self.f3d.vert_load_size
+        self.clearMaterial()
+        mat = self.mat()
+        mat.set_combiner = False
+        self.triMatIndices = []
+        self.materialChanged = True
+        self.lastMaterialIndex = None
+        self.vertexData = {}
+        self.currentTextureName = None
+
+        self.matrixData = {}
+        self.currentTransformName = None
+        self.limbToBoneName = {}
+
+        self.verts = []
+        self.limbGroups = {}
 
     # MAKE SURE TO CALL THIS BETWEEN parseF3D() CALLS
     def clearMaterial(self):
@@ -659,14 +686,14 @@ class F3DContext:
             if tileSettings.tmem in self.tmemDict:
                 textureName = self.tmemDict[tileSettings.tmem]
                 self.loadTexture(dlData, textureName, region, tileSettings, False)
-                self.applyTileToMaterial(0, tileSettings, tileSizeSettings)
+                self.applyTileToMaterial(0, tileSettings, tileSizeSettings, dlData)
 
             tileSettings = self.tileSettings[1]
             tileSizeSettings = self.tileSizes[1]
             if tileSettings.tmem in self.tmemDict:
                 textureName = self.tmemDict[tileSettings.tmem]
                 self.loadTexture(dlData, textureName, region, tileSettings, False)
-                self.applyTileToMaterial(1, tileSettings, tileSizeSettings)
+                self.applyTileToMaterial(1, tileSettings, tileSizeSettings, dlData)
 
             self.applyLights()
 
@@ -710,25 +737,31 @@ class F3DContext:
                 return name
         return None
 
+    # override this to handle applying tlut to other texture
+    # ex. in oot, apply to flipbook textures
+    def handleApplyTLUT(
+        self,
+        material: bpy.types.Material,
+        texProp: TextureProperty,
+        tlut: bpy.types.Image,
+        index: int,
+    ):
+        self.applyTLUT(texProp.tex, tlut)
+        self.tlutAppliedTextures.append(texProp.tex)
+
+    # we only want to apply tlut to an existing image under specific conditions.
+    # however we always want to record the changing tlut for texture references.
     def applyTLUTToIndex(self, index):
         mat = self.mat()
         texProp = getattr(mat, "tex" + str(index))
         combinerUses = all_combiner_uses(mat)
-        if (
-            combinerUses["Texture " + str(index)]
-            and (texProp.tex is not None or texProp.use_tex_reference)
-            and texProp.tex_set
-            and texProp.tex_format[:2] == "CI"
-            and (texProp.tex not in self.tlutAppliedTextures or texProp.use_tex_reference)
-            and (
-                texProp.tex not in self.imagesDontApplyTlut or not self.ciImageFilesStoredAsFullColor
-            )  # oot currently stores CI textures in full color pngs
-        ):
 
+        if texProp.tex_format[:2] == "CI":
             # Only handles TLUT at 256
             tlutName = self.tmemDict[256]
             if 256 in self.tmemDict and tlutName is not None:
                 tlut = self.textureData[tlutName]
+                # print(f"TLUT: {tlutName}, {isinstance(tlut, F3DTextureReference)}")
                 if isinstance(tlut, F3DTextureReference) or texProp.use_tex_reference:
                     if not texProp.use_tex_reference:
                         texProp.use_tex_reference = True
@@ -745,9 +778,19 @@ class F3DContext:
                         texProp.pal_reference = tlutName
                         texProp.pal_reference_size = min(tlut.size[0] * tlut.size[1], 256)
 
-                else:
-                    self.applyTLUT(texProp.tex, tlut)
-                    self.tlutAppliedTextures.append(texProp.tex)
+                if (
+                    not isinstance(tlut, F3DTextureReference)
+                    and combinerUses["Texture " + str(index)]
+                    and (texProp.tex is not None)
+                    and texProp.tex_set
+                    and (texProp.tex not in self.tlutAppliedTextures or texProp.use_tex_reference)
+                    and (
+                        texProp.tex not in self.imagesDontApplyTlut or not self.ciImageFilesStoredAsFullColor
+                    )  # oot currently stores CI textures in full color pngs
+                ):
+                    # print(f"Apply tlut {tlutName} ({str(tlut)}) to {self.getImageName(texProp.tex)}")
+                    # print(f"Size: {str(tlut.size[0])} x {str(tlut.size[1])}, Data: {str(len(tlut.pixels))}")
+                    self.handleApplyTLUT(self.materialContext, texProp, tlut, index)
             else:
                 print("Ignoring TLUT.")
 
@@ -1298,7 +1341,32 @@ class F3DContext:
         self.setTile([0, 0, 0, 256, "G_TX_LOADTILE", 0, 0, 0, 0, 0, 0, 0], dlData)
         self.loadTLUT(["G_TX_LOADTILE", count], dlData)
 
-    def applyTileToMaterial(self, index, tileSettings, tileSizeSettings):
+    # override this in a parent context to handle texture references.
+    # keep material parameter for use by parent.
+    # ex. In OOT, you can call self.loadTexture() here based on texture arrays.
+    def handleTextureReference(
+        self,
+        name: str,
+        image: F3DTextureReference,
+        material: bpy.types.Material,
+        index: int,
+        tileSettings: DPSetTile,
+        data: str,
+    ):
+        texProp = getattr(material.f3d_mat, "tex" + str(index))
+        texProp.tex = None
+        texProp.use_tex_reference = True
+        texProp.tex_reference = name
+        size = texProp.tex_reference_size
+
+    # add to this by overriding in a parent context, to handle clearing settings related to previous texture references.
+    def handleTextureValue(self, material: bpy.types.Material, image: bpy.types.Image, index: int):
+        texProp = getattr(material.f3d_mat, "tex" + str(index))
+        texProp.tex = image
+        texProp.use_tex_reference = False
+        size = texProp.tex.size
+
+    def applyTileToMaterial(self, index, tileSettings, tileSizeSettings, dlData: str):
         mat = self.mat()
 
         texProp = getattr(mat, "tex" + str(index))
@@ -1306,14 +1374,9 @@ class F3DContext:
         name = self.tmemDict[tileSettings.tmem]
         image = self.textureData[name]
         if isinstance(image, F3DTextureReference):
-            texProp.tex = None
-            texProp.use_tex_reference = True
-            texProp.tex_reference = name
-            size = texProp.tex_reference_size
+            self.handleTextureReference(name, image, self.materialContext, index, tileSettings, dlData)
         else:
-            texProp.tex = image
-            texProp.use_tex_reference = False
-            size = texProp.tex.size
+            self.handleTextureValue(self.materialContext, image, index)
         texProp.tex_set = True
 
         # TODO: Handle low/high for image files?
@@ -1348,12 +1411,8 @@ class F3DContext:
 
         # TODO: Handle S and T properties
 
-    # Override this to handle game specific references.
-    def handleTextureName(self, textureName):
-        return textureName
-
     def loadTexture(self, data, name, region, tileSettings, isLUT):
-        textureName = self.handleTextureName(name)
+        textureName = name
 
         if textureName in self.textureData:
             return self.textureData[textureName]
@@ -1383,20 +1442,25 @@ class F3DContext:
     def loadTLUT(self, params, dlData):
         tileSettings = self.getTileSettings(params[0])
         name = self.currentTextureName
-        textureName = self.handleTextureName(name)
+        textureName = name
         self.tmemDict[tileSettings.tmem] = textureName
 
         tlut = self.loadTexture(dlData, textureName, [0, 0, 16, 16], tileSettings, True)
         self.materialChanged = True
 
     def applyTLUT(self, image, tlut):
+        invalidIndicesDetected = False
         for i in range(int(len(image.pixels) / 4)):
             lutIndex = int(round(image.pixels[4 * i] * 255))
             newValues = tlut.pixels[4 * lutIndex : 4 * (lutIndex + 1)]
             if len(newValues) < 4:
-                print("Invalid lutIndex " + str(lutIndex))
+                # print("Invalid LUT Index " + str(lutIndex))
+                invalidIndicesDetected = True
             else:
                 image.pixels[4 * i : 4 * (i + 1)] = newValues
+
+        if invalidIndicesDetected:
+            print("Invalid LUT Indices detected.")
 
     def processCommands(self, dlData, dlName, dlCommands):
         callStack = [F3DParsedCommands(dlName, dlCommands, 0)]
@@ -1634,7 +1698,14 @@ class F3DContext:
     def processDLName(self, name):
         return name
 
-    def createMesh(self, obj, removeDoubles, importNormals):
+    def deleteMaterialContext(self):
+        if self.materialContext is not None:
+            bpy.data.materials.remove(self.materialContext)
+        else:
+            raise PluginError("Attempting to delete material context that is None.")
+
+    # if deleteMaterialContext is False, then manually call self.deleteMaterialContext() later.
+    def createMesh(self, obj, removeDoubles, importNormals, deleteMaterialContext: bool):
         mesh = obj.data
         if len(self.verts) % 3 != 0:
             print(len(self.verts))
@@ -1688,7 +1759,8 @@ class F3DContext:
             bpy.ops.mesh.remove_doubles()
             bpy.ops.object.mode_set(mode="OBJECT")
 
-        bpy.data.materials.remove(self.materialContext)
+        if deleteMaterialContext:
+            self.deleteMaterialContext()
 
         obj.location = bpy.context.scene.cursor.location
 
@@ -1721,8 +1793,10 @@ def parseF3D(dlData, dlName, obj, transformMatrix, limbName, boneName, drawLayer
     # vertexGroup = getOrMakeVertexGroup(obj, boneName)
     # groupIndex = vertexGroup.index
 
-    dlCommands = parseDLData(dlData, dlName)
-    f3dContext.processCommands(dlData, dlName, dlCommands)
+    processedDLName = f3dContext.processDLName(dlName)
+    if processedDLName is not None:
+        dlCommands = parseDLData(dlData, processedDLName)
+        f3dContext.processCommands(dlData, processedDLName, dlCommands)
 
 
 def parseDLData(dlData, dlName):
@@ -1851,16 +1925,10 @@ def CI4toRGBA32(value):
     return [value / 255, value / 255, value / 255, 1]
 
 
-class F3DTextureReference:
-    def __init__(self, name, width):
-        self.name = name
-        self.width = width
-
-
 def parseTextureData(dlData, textureName, f3dContext, imageFormat, imageSize, width, basePath, isLUT, f3d):
 
     matchResult = re.search(
-        "([A-Za-z0-9\_]+)\s*" + re.escape(textureName) + "\s*\[\s*[0-9x]*\s*\]\s*=\s*\{([^\}]*)\s\}\s*;\s*",
+        r"([A-Za-z0-9\_]+)\s*" + re.escape(textureName) + r"\s*\[\s*[0-9a-fA-Fx]*\s*\]\s*=\s*\{([^\}]*)\s*\}\s*;\s*",
         dlData,
         re.DOTALL,
     )
@@ -2031,8 +2099,7 @@ def getImportData(filepaths):
     return data
 
 
-def importMeshC(filepaths, name, scale, removeDoubles, importNormals, drawLayer, f3dContext):
-    data = getImportData(filepaths)
+def importMeshC(data, name, scale, removeDoubles, importNormals, drawLayer, f3dContext):
 
     # Create new skinned mesh
     mesh = bpy.data.meshes.new(name + "_mesh")
@@ -2045,7 +2112,7 @@ def importMeshC(filepaths, name, scale, removeDoubles, importNormals, drawLayer,
     parseF3D(data, name, obj, transformMatrix, name, name, "oot", drawLayer, f3dContext)
 
     f3dContext.clearMaterial()
-    f3dContext.createMesh(obj, removeDoubles, importNormals)
+    f3dContext.createMesh(obj, removeDoubles, importNormals, True)
 
     applyRotation([obj], math.radians(-90), "X")
 
@@ -2075,10 +2142,10 @@ class F3D_ImportDL(bpy.types.Operator):
             f3dType = context.scene.f3d_type
             isHWv1 = context.scene.isHWv1
 
-            importPaths = [importPath]
+            data = getImportData([importPath])
 
             importMeshC(
-                importPaths,
+                data,
                 name,
                 scaleValue,
                 removeDoubles,

@@ -2265,7 +2265,7 @@ class FModel:
         self.texturesSavedLastExport = 0  # hacky
 
     # Called before SPEndDisplayList
-    def onMaterialCommandsBuilt(self, gfxList, revertList, material, drawLayer):
+    def onMaterialCommandsBuilt(self, fMaterial, material, drawLayer):
         return
 
     def getTextureSuffixFromFormat(self, texFmt):
@@ -2320,7 +2320,16 @@ class FModel:
         # Check if texture is in self
         if imageKey in self.textures:
             fImage = self.textures[imageKey]
-            fPalette = self.textures[fImage.paletteKey] if fImage.paletteKey is not None else None
+            if fImage.paletteKey is not None:
+                if fImage.paletteKey in self.textures:
+                    fPalette = self.textures[fImage.paletteKey]
+                else:
+                    print(f"Can't find {str(fImage.paletteKey)}")
+                    fPalette = None
+            else:
+                # print("Palette key is None")
+                fPalette = None
+
             return fImage, fPalette
 
         if self.parentModel is not None:
