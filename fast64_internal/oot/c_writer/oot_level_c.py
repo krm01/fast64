@@ -236,6 +236,11 @@ def cmdActorList(room, header, cmdCount):
     cmd.source = "\tSCENE_CMD_ACTOR_LIST(" + str(len(room.actorList)) + ", " + str(room.actorListName(header)) + "),\n"
     return cmd
 
+def cmdUsePointLighting(room, header, cmdCount):
+    cmd = CData()
+    cmd.source = "\tSCENE_CMD_USE_POINT_LIGHTING(true, 0x0),\n"
+    return cmd
+
 
 def ootObjectListToC(room, headerIndex):
     data = CData()
@@ -347,6 +352,8 @@ def ootRoomMeshToC(room, textureExportSettings):
     exportData = mesh.model.to_c(textureExportSettings, OOTGfxFormatter(ScrollMethod.Vertex))
 
     meshData.append(exportData.all())
+    if room.usePointLighting:
+        meshData.source = meshData.source.replace("G_LIGHTING", "G_LIGHTING | G_LIGHTING_POSITIONAL")
     meshHeader.append(meshEntries)
     # meshHeader.append(meshData)
 
@@ -368,6 +375,8 @@ def ootRoomCommandsToC(room, headerIndex):
         commands.append(cmdObjectList(room, headerIndex, len(commands)))
     if len(room.actorList) > 0:
         commands.append(cmdActorList(room, headerIndex, len(commands)))
+    if room.usePointLighting:
+        commands.append(cmdUsePointLighting(room, headerIndex, len(commands)))
     commands.append(cmdEndMarker(room.roomName(), headerIndex, len(commands)))
 
     data = CData()

@@ -387,6 +387,7 @@ class OOTRoom:
         self.roomBehaviour = None
         self.disableWarpSongs = False
         self.showInvisibleActors = False
+        self.usePointLighting = False
         self.linkIdleMode = None
 
         self.customBehaviourX = None

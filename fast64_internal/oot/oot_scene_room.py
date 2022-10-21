@@ -418,6 +418,7 @@ class OOTRoomHeaderProperty(bpy.types.PropertyGroup):
 	roomBehaviourCustom : bpy.props.StringProperty(default = "0x00")
 	disableWarpSongs : bpy.props.BoolProperty(name = "Disable Warp Songs")
 	showInvisibleActors : bpy.props.BoolProperty(name = "Show Invisible Actors")
+	usePointLighting : bpy.props.BoolProperty(name = "Use Point Lighting", default = False)
 	linkIdleMode : bpy.props.EnumProperty(name = "Link Idle Mode",items = ootEnumLinkIdle, default = "0x00")
 	linkIdleModeCustom : bpy.props.StringProperty(name = "Link Idle Mode Custom", default = '0x00')
 
@@ -486,6 +487,7 @@ def drawRoomHeaderProperty(layout, roomProp, dropdownLabel, headerIndex, objName
 		drawEnumWithCustom(behaviourBox, roomProp, 'linkIdleMode', "Link Idle Mode", "")
 		behaviourBox.prop(roomProp, "disableWarpSongs", text = "Disable Warp Songs")
 		behaviourBox.prop(roomProp, "showInvisibleActors", text = "Show Invisible Actors")
+		behaviourBox.prop(roomProp, "usePointLighting", text = "Use Point Lighting")
 
 		# Time
 		skyboxAndTime = layout.column()

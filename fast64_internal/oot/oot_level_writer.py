@@ -270,6 +270,7 @@ def readRoomData(room, roomHeader, alternateRoomHeaders):
     room.roomBehaviour = getCustomProperty(roomHeader, "roomBehaviour")
     room.disableWarpSongs = roomHeader.disableWarpSongs
     room.showInvisibleActors = roomHeader.showInvisibleActors
+    room.usePointLighting = roomHeader.usePointLighting
     room.linkIdleMode = getCustomProperty(roomHeader, "linkIdleMode")
     room.linkIdleModeCustom = roomHeader.linkIdleModeCustom
     room.setWind = roomHeader.setWind
