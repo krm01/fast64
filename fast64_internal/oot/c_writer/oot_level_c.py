@@ -238,7 +238,7 @@ def cmdActorList(room, header, cmdCount):
 
 def cmdUsePointLighting(room, header, cmdCount):
     cmd = CData()
-    cmd.source = "\tSCENE_CMD_USE_POINT_LIGHTING(true, 0x0),\n"
+    cmd.source = "\tSCENE_CMD_USE_POINT_LIGHTING(" + ("true" if room.usePointLighting else "false") + ", 0x0),\n"
     return cmd
 
 
@@ -375,8 +375,7 @@ def ootRoomCommandsToC(room, headerIndex):
         commands.append(cmdObjectList(room, headerIndex, len(commands)))
     if len(room.actorList) > 0:
         commands.append(cmdActorList(room, headerIndex, len(commands)))
-    if room.usePointLighting:
-        commands.append(cmdUsePointLighting(room, headerIndex, len(commands)))
+    commands.append(cmdUsePointLighting(room, headerIndex, len(commands)))
     commands.append(cmdEndMarker(room.roomName(), headerIndex, len(commands)))
 
     data = CData()
