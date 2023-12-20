@@ -144,6 +144,23 @@ def getRoomList(outScene: OOTScene):
     roomList.source += "};\n\n"
     return roomList
 
+########################
+# Map Floor Boundaries #
+########################
+def getMapFloorBoundariesData(outScene: OOTScene, headerIndex: int):
+    boundaries = CData()
+
+    listName = f"f32 {outScene.mapFloorBoundariesListName(headerIndex)}[{len(outScene.mapFloorBoundaries)}][4]"
+    boundaries.header = f"extern {listName};\n"
+
+    boundaries.source = (
+        (listName + " = {\n")
+        + "\n".join(indent + "{ " + ", ".join("{:.3f}f".format(it) for it in entry) + " },"
+                    for entry in outScene.mapFloorBoundaries)
+        + "\n};\n\n"
+    )
+
+    return boundaries
 
 ################
 # Scene Header #
@@ -174,6 +191,9 @@ def getHeaderData(header: OOTScene, headerIndex: int):
     # Write the path data, if used
     if len(header.pathList) > 0:
         headerData.append(getPathData(header, headerIndex))
+
+    if len(header.mapFloorBoundaries) > 0:
+        headerData.append(getMapFloorBoundariesData(header, headerIndex))
 
     return headerData
 

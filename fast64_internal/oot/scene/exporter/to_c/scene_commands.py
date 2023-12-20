@@ -75,6 +75,11 @@ def getCutsceneDataCmd(outScene: OOTScene, headerIndex: int):
     return indent + f"SCENE_CMD_CUTSCENE_DATA({csDataName})"
 
 
+def getMapFloorBoundariesCmd(outScene: OOTScene, headerIndex: int):
+    num_boundaries = len(outScene.mapFloorBoundaries)
+    return indent + f"SCENE_CMD_UNUSED_02({num_boundaries}, {outScene.mapFloorBoundariesListName(headerIndex)})"
+
+
 def getSceneCommandList(outScene: OOTScene, headerIndex: int):
     cmdListData = CData()
     listName = f"SceneCmd {outScene.sceneName()}_header{headerIndex:02}"
@@ -101,6 +106,9 @@ def getSceneCommandList(outScene: OOTScene, headerIndex: int):
 
     if outScene.writeCutscene:
         getCmdFunc2ArgList.append(getCutsceneDataCmd)
+
+    if len(outScene.mapFloorBoundaries) > 0:
+        getCmdFunc2ArgList.append(getMapFloorBoundariesCmd)
 
     sceneCmdData = (
         (outScene.getAltHeaderListCmd(outScene.alternateHeadersName()) if outScene.hasAlternateHeaders() else "")

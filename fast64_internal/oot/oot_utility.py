@@ -330,6 +330,7 @@ def ootSelectMeshChildrenOnly(obj, includeEmpties):
     isMesh = isinstance(obj.data, bpy.types.Mesh)
     isEmpty = (
         obj.data is None or isinstance(obj.data, bpy.types.Camera) or isinstance(obj.data, bpy.types.Curve)
+        or (obj.ootEmptyType == "Map Floor Boundary")
     ) and includeEmpties
     if isMesh or isEmpty:
         obj.select_set(True)

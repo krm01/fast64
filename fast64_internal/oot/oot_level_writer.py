@@ -557,6 +557,7 @@ def ootConvertScene(originalSceneObj, transformMatrix, sceneName, DLFormat, conv
 
         scene.validateIndices()
         scene.sortEntrances()
+        scene.processAndValidateMapFloorBoundaries()
         exportCollisionCommon(scene.collision, sceneObj, transformMatrix, True, sceneName)
 
         ootCleanupScene(originalSceneObj, allObjs)
@@ -740,7 +741,7 @@ def ootProcessLOD(
     DLGroup.addDLCall(transparentLOD.draw, "Transparent")
 
 
-def ootProcessEmpties(scene, room, sceneObj, obj, transformMatrix):
+def ootProcessEmpties(scene: OOTScene, room: OOTRoom, sceneObj, obj, transformMatrix):
     translation, rotation, scale, orientedRotation = getConvertedTransform(transformMatrix, sceneObj, obj, True)
 
     if obj.data is None:
@@ -841,6 +842,8 @@ def ootProcessEmpties(scene, room, sceneObj, obj, transformMatrix):
             readPathProp(obj.ootSplineProperty, obj, scene, sceneObj, scene.name, transformMatrix)
         else:
             readCrawlspace(obj, scene, transformMatrix)
+    elif obj.ootEmptyType == "Map Floor Boundary":
+        ootProcessMapFloorBoundary(sceneObj, obj, transformMatrix, scene, room)
 
     for childObj in obj.children:
         ootProcessEmpties(scene, room, sceneObj, childObj, transformMatrix)
@@ -862,3 +865,15 @@ def ootProcessWaterBox(sceneObj, obj, transformMatrix, scene, roomIndex):
             obj.empty_display_size,
         )
     )
+
+
+def ootProcessMapFloorBoundary(sceneObj, boundaryEmpty, transformMatrix, scene: OOTScene, room: OOTRoom):
+    translation, _, _, _ = getConvertedTransform(transformMatrix, sceneObj, boundaryEmpty, True)
+
+    scene.mapFloorBoundaries.append([
+        room.index,
+        translation[1],
+        boundaryEmpty.ootMapFloorBoundaryProperty.floorAbove,
+        boundaryEmpty.ootMapFloorBoundaryProperty.floorBelow,
+    ])
+

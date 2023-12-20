@@ -199,6 +199,50 @@ class OOT_AddPath(Operator):
         return {"FINISHED"}
 
 
+class OOT_AddMapFloorBoundary(Operator):
+    bl_idname = "object.oot_add_mapfloorboundary"
+    bl_label = "Add Map Floor Boundary"
+    bl_options = {"REGISTER", "UNDO", "PRESET"}
+
+    def execute(self, context):
+        if context.mode != "OBJECT" or context.active_object.ootEmptyType != "Room":
+            raise PluginError("Must have target Room empty selected in Object Bode.")
+
+        selected_room = context.active_object
+        object.select_all(action="DESELECT")
+
+        location = Vector(context.scene.cursor.location)
+        object.empty_add(type="IMAGE", radius=1, align="WORLD", location=location[:])
+        floor_plane = context.view_layer.objects.active
+        floor_plane.ootEmptyType = "Map Floor Boundary"
+        floor_plane.name = "FloorPlane"
+
+        def _find_image():
+            it = None
+            for image in bpy.data.images:
+                if image.name == "floorplane.fast64.png":
+                    it = image
+            return it
+ 
+        empty_image = _find_image()
+
+        if empty_image is None:
+            bpy.ops.image.new(name="floorplane.fast64.png", color=(0.9, 0.7, 0.3, 0.5))
+            empty_image = _find_image()
+
+        floor_plane.use_empty_image_alpha = True
+        floor_plane.color[3] = 1.0
+        floor_plane.data = empty_image
+        floor_plane.empty_display_size = 50
+        parentObject(selected_room, floor_plane)
+
+        object.select_all(action="DESELECT")
+        floor_plane.select_set(True)
+        context.view_layer.objects.active = floor_plane
+
+        return {"FINISHED"}
+
+
 class OOTClearTransformAndLock(Operator):
     bl_idname = "object.oot_clear_transform"
     bl_label = "Clear Transform (Scenes & Cutscenes)"

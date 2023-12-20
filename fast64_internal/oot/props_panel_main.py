@@ -96,7 +96,11 @@ class OOTObjectPanel(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return context.scene.gameEditorMode == "OOT" and (context.object is not None and context.object.data is None)
+        is_oot = context.scene.gameEditorMode == "OOT"
+        object_valid = context.object is not None
+        has_no_data = context.object.data is None
+        has_image_data = isinstance(context.object.data, bpy.types.Image)
+        return is_oot and object_valid and (has_no_data or has_image_data)
 
     def draw(self, context):
         prop_split(self.layout, context.scene, "gameEditorMode", "Game")
@@ -164,6 +168,10 @@ class OOTObjectPanel(bpy.types.Panel):
             actorCueProp: OOTCSMotionActorCueProperty = obj.ootCSMotionProperty.actorCueProp
             actorCueProp.draw_props(box, labelPrefix, obj.ootEmptyType == "CS Dummy Cue", obj.name)
 
+        elif obj.ootEmptyType == "Map Floor Boundary":
+            mapFloorBoundaryProp: OOTMapFloorBoundaryProperty = obj.ootMapFloorBoundaryProperty
+            mapFloorBoundaryProp.draw_props(box)
+
         elif obj.ootEmptyType == "None":
             box.label(text="Geometry can be parented to this.")
 
@@ -206,11 +214,32 @@ class OOTCullGroupProperty(bpy.types.PropertyGroup):
         col.label(text="Use Options -> Transform -> Affect Only -> Parent ", icon="INFO")
         col.label(text="to move object without affecting children.")
 
+class OOTMapFloorBoundaryProperty(bpy.types.PropertyGroup):
+    floorAbove: bpy.props.IntProperty()
+    floorBelow: bpy.props.IntProperty()
+
+    def validate_config(self):
+        if self.floorAbove == self.floorBelow:
+            return True
+        elif self.floorAbove == self.floorBelow + 1:
+            return True
+        else:
+            return False
+
+    def draw_props(self, layout: bpy.types.UILayout):
+        col = layout.column()
+        col.label(text="Negative values are interpreted as Basement floors.", icon="INFO")
+        prop_split(col, self, "floorAbove", "Above Plane Floor Index")
+        prop_split(col, self, "floorBelow", "Below Plane Floor Index")
+        if not self.validate_config():
+            col.label(text="INVALID, floor indices must be the same,", icon="ERROR")
+            col.label(text="    or Above Plane Index 1 higher than Below.")
 
 oot_obj_classes = (
     OOTSceneProperties,
     OOT_ObjectProperties,
     OOTCullGroupProperty,
+    OOTMapFloorBoundaryProperty,
     OOT_ManualUpgrade,
 )
 
@@ -237,12 +266,14 @@ def oot_obj_register():
 
     bpy.types.Scene.ootActiveHeaderLock = bpy.props.BoolProperty(default=False)
     bpy.types.Object.ootCullGroupProperty = bpy.props.PointerProperty(type=OOTCullGroupProperty)
+    bpy.types.Object.ootMapFloorBoundaryProperty = bpy.props.PointerProperty(type=OOTMapFloorBoundaryProperty)
 
 
 def oot_obj_unregister():
     del bpy.types.Scene.ootActiveHeaderLock
     del bpy.types.Object.ootEmptyType
     del bpy.types.Object.ootCullGroupProperty
+    del bpy.types.Object.ootMapFloorBoundaryProperty
 
     for cls in reversed(oot_obj_classes):
         unregister_class(cls)

@@ -106,6 +106,7 @@ ootEnumEmptyType = [
     ("CS Actor Cue Preview", "CS Actor Cue Preview", "CS Actor Cue Preview"),
     ("CS Player Cue Preview", "CS Player Cue Preview", "CS Player Cue Preview"),
     ("CS Dummy Cue", "CS Dummy Cue", "CS Dummy Cue"),
+    ("Map Floor Boundary", "Map Floor Boundary", "Map Floor Boundary"),
     # ('Camera Volume', 'Camera Volume', 'Camera Volume'),
 ]
 

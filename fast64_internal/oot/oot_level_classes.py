@@ -124,6 +124,8 @@ class OOTScene(OOTCommonCommands):
 
         self.sceneTableEntry = OOTSceneTableEntry()
 
+        self.mapFloorBoundaries = []
+
     def getAlternateHeaderScene(self, name):
         scene = OOTScene(name, self.model)
         scene.write_dummy_room_list = self.write_dummy_room_list
@@ -166,6 +168,10 @@ class OOTScene(OOTCommonCommands):
 
     def alternateHeadersName(self):
         return self.sceneName() + "_alternateHeaders"
+
+    def mapFloorBoundariesListName(self, headerIndex):
+        return self.sceneName() + "_header" + format(headerIndex, "02") + "_mapFloorBoundaries"
+
 
     def hasAlternateHeaders(self):
         return not (
@@ -234,6 +240,11 @@ class OOTScene(OOTCommonCommands):
     def copyBgImages(self, exportPath: str):
         for i in range(len(self.rooms)):
             self.rooms[i].mesh.copyBgImages(exportPath)
+
+
+    def processAndValidateMapFloorBoundaries(self):
+        if len(self.mapFloorBoundaries) == 0:
+            return
 
 
 class OOTBGImage:
