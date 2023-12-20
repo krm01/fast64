@@ -79,6 +79,39 @@ class OOTBGProperty(PropertyGroup):
         drawCollectionOps(box, index, "BgImage", None, objName)
 
 
+class OOTMinimapFloorProperty(PropertyGroup):
+    expandTab: BoolProperty(name="Expand Tab")
+
+    mapTypeEnum = [
+        ("Image", "Image", "Image"),
+        ("None", "None", "None"),
+    ]
+
+    floorNum: IntProperty(name="Floor Num", default=0)
+    mapType: EnumProperty(items=mapTypeEnum, default="None")
+    offsetX: FloatProperty(name="Offset X", default=0.0)
+    offsetY: FloatProperty(name="Offset Y", default=0.0)
+    scaleX: FloatProperty(name="Scale X", default=1.0)
+    scaleY: FloatProperty(name="Scale Y", default=1.0)
+
+
+    minimapTex: bpy.props.PointerProperty(type=Image)
+
+    def draw_props(self, layout: UILayout, index: int, headerIndex: int, objName: str):
+        box = layout.box()
+        box.prop(self, "expandTab", text="Floor " + str(self.floorNum), icon="TRIA_DOWN" if self.expandTab else "TRIA_RIGHT")
+        if self.expandTab:
+            drawCollectionOps(box, index, "MinimapFloor", headerIndex, objName)
+            prop_split(box, self, "floorNum", "Floor Number")
+            prop_split(box, self, "mapType", "Minimap Image")
+            if getattr(self, "mapType") == "Image":
+                prop_split(box, self, "minimapTex", "Image")
+            prop_split(box, self, "offsetX", "Offset X")
+            prop_split(box, self, "offsetY", "Offset Y")
+            prop_split(box, self, "scaleX", "Scale X")
+            prop_split(box, self, "scaleY", "Scale Y")
+
+
 class OOTRoomHeaderProperty(PropertyGroup):
     expandTab: BoolProperty(name="Expand Tab")
     menuTab: EnumProperty(items=ootEnumRoomMenu, update=onMenuTabChange)
@@ -125,6 +158,8 @@ class OOTRoomHeaderProperty(PropertyGroup):
     defaultCullDistance: IntProperty(name="Default Cull Distance", min=1, default=100)
     bgImageList: CollectionProperty(type=OOTBGProperty)
     bgImageTab: BoolProperty(name="BG Images")
+
+    minimapFloors: CollectionProperty(type=OOTMinimapFloorProperty)
 
     def drawBGImageList(self, layout: UILayout, objName: str):
         box = layout.column()
@@ -212,6 +247,33 @@ class OOTRoomHeaderProperty(PropertyGroup):
                 windBox.prop(self, "windStrength", text="Strength")
                 # prop_split(windBox, self, "windVector", "Wind Vector")
 
+            # Minimap Floors
+            map_floor_boundaries = [it for it in bpy.data.objects
+                                    if it.parent is not None and it.parent.name == objName
+                                    and it.type == "EMPTY" and it.ootEmptyType == "Map Floor Boundary"]
+            if len(map_floor_boundaries) > 0:
+                minimapBox = layout.column()
+                minimapBox.box().label(text="Minimap Floors")
+
+                used_floors = set()
+                for boundary in map_floor_boundaries:
+                    used_floors.add(boundary.ootMapFloorBoundaryProperty.floorBelow)
+                    used_floors.add(boundary.ootMapFloorBoundaryProperty.floorAbove)
+
+                added_floors = set(floor.floorNum for floor in self.minimapFloors)
+                all_floors_accounted_for = added_floors == used_floors
+
+                if not all_floors_accounted_for:
+                    missing_floors = sorted((used_floors ^ added_floors) & used_floors)
+                    for missing_floor in missing_floors:
+                        minimapBox.label(text=f"Missing config for floor {missing_floor}", icon="ERROR")
+
+                for i, floorProp in enumerate(self.minimapFloors):
+                    floorProp.draw_props(minimapBox, i, headerIndex, objName)
+
+                drawAddButton(minimapBox, len(self.minimapFloors), "MinimapFloor", headerIndex, objName)
+
+
         elif menuTab == "Objects":
             upgradeLayout = layout.column()
             objBox = layout.column()
@@ -270,6 +332,7 @@ class OOTAlternateRoomHeaderProperty(PropertyGroup):
 classes = (
     OOTObjectProperty,
     OOTBGProperty,
+    OOTMinimapFloorProperty,
     OOTRoomHeaderProperty,
     OOTAlternateRoomHeaderProperty,
 )

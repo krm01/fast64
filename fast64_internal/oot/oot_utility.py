@@ -576,6 +576,8 @@ def getCollection(objName, collectionType, subIndex):
         collection = obj.ootSceneHeader.extraCutscenes
     elif collectionType == "BgImage":
         collection = obj.ootRoomHeader.bgImageList
+    elif collectionType == "MinimapFloor":
+        collection = obj.ootRoomHeader.minimapFloors
     else:
         raise PluginError("Invalid collection type: " + collectionType)
 
