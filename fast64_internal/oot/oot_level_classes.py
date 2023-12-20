@@ -1,4 +1,4 @@
-import bpy, os, shutil
+import bpy, os, shutil, itertools
 from typing import Optional
 from ..utility import PluginError, toAlnum, indent
 from .oot_collision_classes import OOTCollision
@@ -245,6 +245,50 @@ class OOTScene(OOTCommonCommands):
     def processAndValidateMapFloorBoundaries(self):
         if len(self.mapFloorBoundaries) == 0:
             return
+
+        # Check that every room has at least one MapFloorBoundary.
+        # assume room IDs are already validated as being sequential
+        covered_rooms = { it[0] for it in self.mapFloorBoundaries }
+        room_ids = set(range(len(self.rooms)))
+        all_rooms_covered = (room_ids & covered_rooms) == room_ids
+        if not all_rooms_covered:
+            missing_rooms = room_ids & (room_ids ^ covered_rooms)
+            raise PluginError(f"Every room must have at least one MapFloorBoundary. Check rooms: {missing_rooms}")
+
+        # validate internal consistency of individial boundaries
+        for boundary in self.mapFloorBoundaries:
+            if boundary[2] == boundary[3]:
+                continue
+            elif (boundary[2] + 1) == boundary[3]:
+                continue
+            else:
+                raise PluginError(f"Room {boundary[0]} invalid boundary: roomAbove must be equal to or ONE (1) greater than roomBelow")
+
+        # validate boundaries within each room
+        boundaries_per_room = {
+            room : sorted((boundary[1:] for boundary in boundaries), key=lambda it: it[0])
+            for room, boundaries in itertools.groupby(self.mapFloorBoundaries, key=lambda it: it[0])
+        }
+
+        # walk up the boundaries and make sure they are in order
+        # and have no gaps in the floors
+        for room, boundaries in boundaries_per_room.items():
+            print(f":::: {boundaries = }")
+            observed_boundaries = dict()
+            cur_floor = boundaries[0][2]
+
+            for n, boundary in enumerate(boundaries[1:]):
+                boundary_str = str(boundary[1:])
+
+                if boundary_str in observed_boundaries:
+                    raise PluginError(f"Room {room} has illegal Map Floor Boundaries, duplicate boundaries with settings: (below: {boundary[1]}, above: {boundary[2]})")
+
+                observed_boundaries[boundary_str] = boundary[0]
+
+                if cur_floor != boundary[1]:
+                    raise PluginError(f"Room {room} has illegal Map Floor Boundaries, at boundary ({n + 1}) from bottom: expected roomAbove ({cur_floor}) of lower boundary to match roomBelow ({boundary[1]}) of upper boundary")
+
+                cur_floor = boundary[2]
 
 
 class OOTBGImage:

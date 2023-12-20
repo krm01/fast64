@@ -873,7 +873,7 @@ def ootProcessMapFloorBoundary(sceneObj, boundaryEmpty, transformMatrix, scene: 
     scene.mapFloorBoundaries.append([
         room.index,
         translation[1],
-        boundaryEmpty.ootMapFloorBoundaryProperty.floorAbove,
         boundaryEmpty.ootMapFloorBoundaryProperty.floorBelow,
+        boundaryEmpty.ootMapFloorBoundaryProperty.floorAbove,
     ])
 
