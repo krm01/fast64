@@ -5,7 +5,7 @@ from bpy.ops import mesh, object, curve
 from bpy.types import Operator, Object, Context
 from bpy.props import FloatProperty, StringProperty
 from ...operators import AddWaterBox, addMaterialByName
-from ...utility import parentObject, setOrigin
+from ...utility import parentObject, setOrigin, PluginError
 from ..cutscene.motion.utility import setupCutscene, createNewCameraShot
 
 
@@ -206,7 +206,7 @@ class OOT_AddMapFloorBoundary(Operator):
 
     def execute(self, context):
         if context.mode != "OBJECT" or context.active_object.ootEmptyType != "Room":
-            raise PluginError("Must have target Room empty selected in Object Bode.")
+            raise PluginError("Must have target Room empty selected in Object Mode.")
 
         selected_room = context.active_object
         object.select_all(action="DESELECT")
