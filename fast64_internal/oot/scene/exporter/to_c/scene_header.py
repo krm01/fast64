@@ -1,3 +1,4 @@
+import itertools
 from .....utility import CData, indent
 from .....f3d.f3d_gbi import ScrollMethod, TextureExportSettings
 from ....oot_model_classes import OOTGfxFormatter
@@ -148,19 +149,63 @@ def getRoomList(outScene: OOTScene):
 # Map Floor Boundaries #
 ########################
 def getMapFloorBoundariesData(outScene: OOTScene, headerIndex: int):
-    boundaries = CData()
+    outData = CData()
 
-    listName = f"s16 {outScene.mapFloorBoundariesListName(headerIndex)}[{len(outScene.mapFloorBoundaries)}][4]"
-    boundaries.header = f"extern {listName};\n"
+    boundaries_per_room = {
+        room : sorted((boundary[1:] for boundary in boundaries), key=lambda it: it[0])
+        for room, boundaries in itertools.groupby(outScene.mapFloorBoundaries, key=lambda it: it[0])
+    }
 
-    boundaries.source = (
-        (listName + " = {\n")
-        + "\n".join(indent + "{ " + ", ".join(map(str, entry)) + " },"
-                    for entry in outScene.mapFloorBoundaries)
-        + "\n};\n\n"
+    # clean up any superfluous boundaries
+    for room, boundaries in sorted(boundaries_per_room.items(), key=lambda it: it[0]):
+        if len(boundaries) > 1:
+            boundaries_per_room[room] = [b for b in boundaries if b[1] != b[2]]
+
+    listName = f"MinimapRoomData {outScene.mapFloorBoundariesListName(headerIndex)}[{len(boundaries_per_room.keys())}]"
+    outData.header = f"extern {listName};\n"
+
+    # write dependencies for mapRoomData
+    for room, boundaries in sorted(boundaries_per_room.items(), key=lambda it: it[0]):
+        if len(boundaries) > 1:
+            outData.source += (
+                "s16 {}_floorHeights_{:02}[]".format(outScene.sceneName(), room) + " = {\n"
+                + indent + ", ".join(str(it[0]) for it in boundaries) + "\n"
+                + "};\n\n"
+            )
+
+        outData.source += (
+            "void* {}_floorTextures_{:02}[]".format(outScene.sceneName(), room) +  " = {\n"
+            + indent + "/* TODO */" + "\n" # TODO
+            + "};\n\n"            
+        )
+
+    outData.source += (
+        listName + " = {\n"
     )
 
-    return boundaries
+    for room, boundaries in sorted(boundaries_per_room.items(), key=lambda it: it[0]):
+        flat_floors = set(itertools.chain(*[it[1:] for it in boundaries]))
+        floorOffset = min(flat_floors)
+        numFloors = len(boundaries)
+        if numFloors == 1:
+            floorHeightsPtr = "NULL"
+        else:
+            floorHeightsPtr = "&{}_floorHeights_{:02}".format(outScene.sceneName(), room)
+        floorTexturesPtr = "&{}_floorTextures_{:02}".format(outScene.sceneName(), room)
+        tx, tz, sx, sz = "0", "0", "1", "1"
+        outData.source += (""
+            + indent + "{\n"
+            + indent + indent + "/* floorOffset    */ " + f"{floorOffset}" + ",\n"
+            + indent + indent + "/* numFloors      */ " + f"{numFloors}" + ",\n"
+            + indent + indent + "/* floorHeights   */ " + f"{floorHeightsPtr}" + ",\n"
+            + indent + indent + "/* floorTextures  */ " + f"{floorTexturesPtr}" + ",\n"
+            + indent + indent + "/* tx, tz, sx, sz */ " + f"{tx}, {tz}, {sx}, {sz}" + ",\n"
+            + indent + "},\n"
+        )
+    
+    outData.source += "};\n\n"
+
+    return outData
 
 ################
 # Scene Header #

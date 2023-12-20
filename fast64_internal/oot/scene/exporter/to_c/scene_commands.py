@@ -76,8 +76,8 @@ def getCutsceneDataCmd(outScene: OOTScene, headerIndex: int):
 
 
 def getMapFloorBoundariesCmd(outScene: OOTScene, headerIndex: int):
-    num_boundaries = len(outScene.mapFloorBoundaries)
-    return indent + f"SCENE_CMD_UNUSED_02({num_boundaries}, {outScene.mapFloorBoundariesListName(headerIndex)})"
+    num_rooms = len(set(it[0] for it in outScene.mapFloorBoundaries))
+    return indent + f"SCENE_CMD_UNUSED_02({num_rooms}, {outScene.mapFloorBoundariesListName(headerIndex)})"
 
 
 def getSceneCommandList(outScene: OOTScene, headerIndex: int):
