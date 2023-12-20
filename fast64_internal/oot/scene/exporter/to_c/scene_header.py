@@ -150,12 +150,12 @@ def getRoomList(outScene: OOTScene):
 def getMapFloorBoundariesData(outScene: OOTScene, headerIndex: int):
     boundaries = CData()
 
-    listName = f"f32 {outScene.mapFloorBoundariesListName(headerIndex)}[{len(outScene.mapFloorBoundaries)}][4]"
+    listName = f"s16 {outScene.mapFloorBoundariesListName(headerIndex)}[{len(outScene.mapFloorBoundaries)}][4]"
     boundaries.header = f"extern {listName};\n"
 
     boundaries.source = (
         (listName + " = {\n")
-        + "\n".join(indent + "{ " + ", ".join("{:.3f}f".format(it) for it in entry) + " },"
+        + "\n".join(indent + "{ " + ", ".join(map(str, entry)) + " },"
                     for entry in outScene.mapFloorBoundaries)
         + "\n};\n\n"
     )
