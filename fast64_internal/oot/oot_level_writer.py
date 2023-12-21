@@ -378,6 +378,10 @@ def readRoomData(
     room.disableSunMoon = roomHeader.disableSunMoon
     room.echo = roomHeader.echo
     room.minimapFloors = []
+    room.minimapOffsetX = roomHeader.minimapOffsetX
+    room.minimapOffsetY = roomHeader.minimapOffsetY
+    room.minimapScaleX = roomHeader.minimapScaleX
+    room.minimapScaleY = roomHeader.minimapScaleY
     for floor in roomHeader.minimapFloors:
         room.minimapFloors.append([
             floor.floorNum,

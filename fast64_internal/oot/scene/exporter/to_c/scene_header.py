@@ -164,15 +164,14 @@ def getMapFloorBoundariesData(outScene: OOTScene, headerIndex: int):
     listName = f"MinimapRoomData {outScene.mapFloorBoundariesListName(headerIndex)}[{len(boundaries_per_room.keys())}]"
     outData.header = f"extern {listName};\n"
 
+    combined = {}
     for room_id, room in outScene.rooms.items():
-        print(f":::: {room_id =}, {room.minimapOffsetX = }, {room.minimapScaleY = }")
-        for floor in room.minimapFloors:
-            print(f":::::::: {floor}")
-
+        combined[room_id] = (room, boundaries_per_room[room_id])
     # TODO: Write the data for offsets/images
 
-    # write dependencies for mapRoomData
-    for room, boundaries in sorted(boundaries_per_room.items(), key=lambda it: it[0]):
+    for room, data in sorted(combined.items(), key=lambda it: it[0]):
+        room_data, boundaries = data
+
         if len(boundaries) > 1:
             outData.source += (
                 "s16 {}_floorHeights_{:02}[]".format(outScene.sceneName(), room) + " = {\n"
@@ -190,7 +189,8 @@ def getMapFloorBoundariesData(outScene: OOTScene, headerIndex: int):
         listName + " = {\n"
     )
 
-    for room, boundaries in sorted(boundaries_per_room.items(), key=lambda it: it[0]):
+    for room, data in sorted(combined.items(), key=lambda it: it[0]):
+        room_data, boundaries = data
         flat_floors = set(itertools.chain(*[it[1:] for it in boundaries]))
         floorOffset = min(flat_floors)
         numFloors = len(boundaries)
@@ -199,14 +199,16 @@ def getMapFloorBoundariesData(outScene: OOTScene, headerIndex: int):
         else:
             floorHeightsPtr = "&{}_floorHeights_{:02}".format(outScene.sceneName(), room)
         floorTexturesPtr = "&{}_floorTextures_{:02}".format(outScene.sceneName(), room)
-        tx, tz, sx, sz = "0", "0", "1", "1"
+        tx, tz = room_data.minimapOffsetX, room_data.minimapOffsetY
+        sx, sz = room_data.minimapScaleX, room_data.minimapScaleY
+
         outData.source += (""
             + indent + "{\n"
             + indent + indent + "/* floorOffset    */ " + f"{floorOffset}" + ",\n"
             + indent + indent + "/* numFloors      */ " + f"{numFloors}" + ",\n"
             + indent + indent + "/* floorHeights   */ " + f"{floorHeightsPtr}" + ",\n"
             + indent + indent + "/* floorTextures  */ " + f"{floorTexturesPtr}" + ",\n"
-            + indent + indent + "/* tx, tz, sx, sz */ " + f"{tx}, {tz}, {sx}, {sz}" + ",\n"
+            + indent + indent + "/* tx, tz, sx, sz */ " + f"{tx:.2f}f, {tz:.2f}f, {sx:.2f}f, {sz:.2f}f" + ",\n"
             + indent + "},\n"
         )
     
