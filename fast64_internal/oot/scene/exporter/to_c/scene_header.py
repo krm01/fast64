@@ -164,6 +164,13 @@ def getMapFloorBoundariesData(outScene: OOTScene, headerIndex: int):
     listName = f"MinimapRoomData {outScene.mapFloorBoundariesListName(headerIndex)}[{len(boundaries_per_room.keys())}]"
     outData.header = f"extern {listName};\n"
 
+    for room_id, room in outScene.rooms.items():
+        print(f":::: {room_id =}, {room.minimapOffsetX = }, {room.minimapScaleY = }")
+        for floor in room.minimapFloors:
+            print(f":::::::: {floor}")
+
+    # TODO: Write the data for offsets/images
+
     # write dependencies for mapRoomData
     for room, boundaries in sorted(boundaries_per_room.items(), key=lambda it: it[0]):
         if len(boundaries) > 1:

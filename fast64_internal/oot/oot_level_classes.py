@@ -463,6 +463,13 @@ class OOTRoom(OOTCommonCommands):
         # Echo
         self.echo = 0x00
 
+        # Minimap Floors
+        self.minimapFloors = []
+        self.minimapOffsetX = 0.0
+        self.minimapOffsetY = 0.0
+        self.minimapScaleX = 1.0
+        self.minimapScaleY = 1.0
+
         self.objectIDList = []
 
         self.childNightHeader = None

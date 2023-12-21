@@ -377,6 +377,13 @@ def readRoomData(
     room.disableSkybox = roomHeader.disableSkybox
     room.disableSunMoon = roomHeader.disableSunMoon
     room.echo = roomHeader.echo
+    room.minimapFloors = []
+    for floor in roomHeader.minimapFloors:
+        room.minimapFloors.append([
+            floor.floorNum,
+            floor.mapType,
+            floor.minimapTex,
+        ])
 
     for obj in roomHeader.objectList:
         # export using the key if the legacy prop isn't present
