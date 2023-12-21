@@ -1,4 +1,5 @@
 import itertools
+from pathlib import Path
 from .....utility import CData, indent
 from .....f3d.f3d_gbi import ScrollMethod, TextureExportSettings
 from ....oot_model_classes import OOTGfxFormatter
@@ -148,7 +149,7 @@ def getRoomList(outScene: OOTScene):
 ########################
 # Map Floor Boundaries #
 ########################
-def getMapFloorBoundariesData(outScene: OOTScene, headerIndex: int):
+def getMapFloorBoundariesData(outScene: OOTScene, headerIndex: int, level_path=None):
     outData = CData()
 
     boundaries_per_room = {
@@ -169,6 +170,15 @@ def getMapFloorBoundariesData(outScene: OOTScene, headerIndex: int):
         combined[room_id] = (room, boundaries_per_room[room_id])
     # TODO: Write the data for offsets/images
 
+            # fImage_temp = FImage(
+            #     imageName,
+            #     texFormatOf[texProp.tex_format],
+            #     texBitSizeF3D[texProp.tex_format],
+            #     flipbookTexture.image.size[0],
+            #     flipbookTexture.image.size[1],
+            #     filename,
+            # )
+
     for room, data in sorted(combined.items(), key=lambda it: it[0]):
         room_data, boundaries = data
 
@@ -179,15 +189,28 @@ def getMapFloorBoundariesData(outScene: OOTScene, headerIndex: int):
                 + "};\n\n"
             )
 
-        outData.source += (
+        print(f"{level_path =}")
+        floor_refs = []
+        for floor in room_data.minimapFloors:
+            if floor[1] == "None":
+                floor_refs.append("NULL")
+            if floor[1] == "Image":
+                image = floor[2]
+                export_name = f"{outScene.sceneName()}_room_{room}_floor_{floor[0]}_tex"
+                floor_refs.append(f"&{export_name}")
+                out_path = Path(level_path, f"{export_name}.ci4.png")
+                image.save_render(filepath=str(out_path))
+                outData.source += (
+                    "u64 " + export_name + "[] = {\n"
+                    + "#include \"" + export_name + ".inc.c\"\n"
+                    + "};\n"
+                )
+
+        outData.source += ("\n"
             "void* {}_floorTextures_{:02}[]".format(outScene.sceneName(), room) +  " = {\n"
-            + indent + "/* TODO */" + "\n" # TODO
+            + "".join(indent + it + ",\n" for it in floor_refs)
             + "};\n\n"            
         )
-
-    outData.source += (
-        listName + " = {\n"
-    )
 
     for room, data in sorted(combined.items(), key=lambda it: it[0]):
         room_data, boundaries = data
@@ -219,7 +242,7 @@ def getMapFloorBoundariesData(outScene: OOTScene, headerIndex: int):
 ################
 # Scene Header #
 ################
-def getHeaderData(header: OOTScene, headerIndex: int):
+def getHeaderData(header: OOTScene, headerIndex: int, level_path=None):
     headerData = CData()
 
     # Write the spawn position list data
@@ -247,12 +270,12 @@ def getHeaderData(header: OOTScene, headerIndex: int):
         headerData.append(getPathData(header, headerIndex))
 
     if len(header.mapFloorBoundaries) > 0:
-        headerData.append(getMapFloorBoundariesData(header, headerIndex))
+        headerData.append(getMapFloorBoundariesData(header, headerIndex, level_path=level_path))
 
     return headerData
 
 
-def getSceneData(outScene: OOTScene):
+def getSceneData(outScene: OOTScene, level_path=None):
     sceneC = CData()
 
     headers = [
@@ -288,6 +311,6 @@ def getSceneData(outScene: OOTScene):
                 # Write the room segment list
                 sceneC.append(getRoomList(outScene))
 
-            sceneC.append(getHeaderData(curHeader, i))
+            sceneC.append(getHeaderData(curHeader, i, level_path=level_path))
 
     return sceneC

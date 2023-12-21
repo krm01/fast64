@@ -31,11 +31,11 @@ class OOTSceneC:
         self.roomModelC = {}
 
 
-def getSceneC(outScene: OOTScene, textureExportSettings: TextureExportSettings):
+def getSceneC(outScene: OOTScene, textureExportSettings: TextureExportSettings, level_path=None):
     """Generates C code for each scene element and returns the data"""
     sceneC = OOTSceneC()
 
-    sceneC.sceneMainC = getSceneData(outScene)
+    sceneC.sceneMainC = getSceneData(outScene, level_path=level_path)
     sceneC.sceneTexturesC = getSceneModel(outScene, textureExportSettings)
     sceneC.sceneCollisionC = getSceneCollision(outScene)
     sceneC.sceneCutscenesC = getSceneCutscenes(outScene)

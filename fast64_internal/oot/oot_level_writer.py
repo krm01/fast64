@@ -126,7 +126,7 @@ def ootExportSceneToC(originalSceneObj, transformMatrix, sceneName, DLFormat, sa
 
     sceneInclude = exportSubdir + "/" + sceneName + "/"
     levelPath = ootGetPath(exportPath, isCustomExport, exportSubdir, sceneName, True, True)
-    levelC = getSceneC(scene, TextureExportSettings(False, savePNG, sceneInclude, levelPath))
+    levelC = getSceneC(scene, TextureExportSettings(False, savePNG, sceneInclude, levelPath), level_path=levelPath)
 
     if not isCustomExport:
         writeTextureArraysExistingScene(scene.model, exportPath, sceneInclude + sceneName + "_scene.h")
