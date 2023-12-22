@@ -1,4 +1,5 @@
 import itertools
+import shutil
 from pathlib import Path
 from .....utility import CData, indent
 from .....f3d.f3d_gbi import ScrollMethod, TextureExportSettings
@@ -157,11 +158,16 @@ def getMapFloorBoundariesData(outScene: OOTScene, headerIndex: int, level_path=N
         for room, boundaries in itertools.groupby(outScene.mapFloorBoundaries, key=lambda it: it[0])
     }
 
+    print(f"{boundaries_per_room =}")
+
     # clean up any superfluous boundaries
     for room, boundaries in sorted(boundaries_per_room.items(), key=lambda it: it[0]):
         if len(boundaries) > 1:
             boundaries_per_room[room] = [b for b in boundaries if b[1] != b[2]]
+        else:
+            boundaries_per_room[room] = boundaries
 
+    print(f"new: {boundaries_per_room =}")
     listName = f"MinimapRoomData {outScene.mapFloorBoundariesListName(headerIndex)}[{len(boundaries_per_room.keys())}]"
     outData.header = f"extern {listName};\n"
 
@@ -181,28 +187,28 @@ def getMapFloorBoundariesData(outScene: OOTScene, headerIndex: int, level_path=N
 
     for room, data in sorted(combined.items(), key=lambda it: it[0]):
         room_data, boundaries = data
-
-        if len(boundaries) > 1:
+        if len(boundaries) > 1 or boundaries[0][1] != boundaries[0][2]:
             outData.source += (
                 "s16 {}_floorHeights_{:02}[]".format(outScene.sceneName(), room) + " = {\n"
                 + indent + ", ".join(str(it[0]) for it in boundaries) + "\n"
                 + "};\n\n"
             )
 
-        print(f"{level_path =}")
         floor_refs = []
         for floor in room_data.minimapFloors:
             if floor[1] == "None":
                 floor_refs.append("NULL")
             if floor[1] == "Image":
                 image = floor[2]
-                export_name = f"{outScene.sceneName()}_room_{room}_floor_{floor[0]}_tex"
+                export_name = f"{outScene.sceneName()}_minimap_floor{floor[0]}_room{room}_tex"
                 floor_refs.append(f"&{export_name}")
-                out_path = Path(level_path, f"{export_name}.ci4.png")
-                image.save_render(filepath=str(out_path))
+                out_path = Path(level_path, image.name)
+                # image.save_render(filepath=str(out_path))
+                # copy it instead of save because blender messes up indexed png
+                shutil.copy2(image.filepath, out_path)
                 outData.source += (
                     "u64 " + export_name + "[] = {\n"
-                    + "#include \"" + export_name + ".inc.c\"\n"
+                    + "#include \"assets/scenes/dungeons/cdi_deku_tree/" + image.name.replace(".png", ".inc.c") + "\"\n"
                     + "};\n"
                 )
 
@@ -211,12 +217,16 @@ def getMapFloorBoundariesData(outScene: OOTScene, headerIndex: int, level_path=N
             + "".join(indent + it + ",\n" for it in floor_refs)
             + "};\n\n"            
         )
+    
+    outData.source += (
+        listName + " = {\n"
+    )
 
     for room, data in sorted(combined.items(), key=lambda it: it[0]):
         room_data, boundaries = data
         flat_floors = set(itertools.chain(*[it[1:] for it in boundaries]))
+        numFloors = len(flat_floors)
         floorOffset = min(flat_floors)
-        numFloors = len(boundaries)
         if numFloors == 1:
             floorHeightsPtr = "NULL"
         else:

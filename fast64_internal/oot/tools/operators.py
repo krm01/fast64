@@ -211,7 +211,7 @@ class OOT_AddMapFloorBoundary(Operator):
         selected_room = context.active_object
         object.select_all(action="DESELECT")
 
-        location = Vector(context.scene.cursor.location)
+        location = Vector(selected_room.location)
         object.empty_add(type="IMAGE", radius=1, align="WORLD", location=location[:])
         floor_plane = context.view_layer.objects.active
         floor_plane.ootEmptyType = "Map Floor Boundary"

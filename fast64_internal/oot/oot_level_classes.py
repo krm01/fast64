@@ -273,7 +273,6 @@ class OOTScene(OOTCommonCommands):
         # walk up the boundaries and make sure they are in order
         # and have no gaps in the floors
         for room, boundaries in boundaries_per_room.items():
-            print(f":::: {boundaries = }")
             observed_boundaries = dict()
             cur_floor = boundaries[0][2]
 
