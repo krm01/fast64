@@ -389,14 +389,12 @@ def readRoomData(
             if child.ootEmptyType == "Map Floor Boundary":
                 translation, _, scale, _ = getConvertedTransform(transformMatrix, sceneObj, child, True)
                 translations.append(translation)
-                scales.append(scale)
+                scales.append(child.scale)
         
         if len(translations) > 0:
             tx, _, ty = translations[0]
             for translation in translations:
                 if translation[0] != tx or translation[2] != ty:
-                    print(f":::: {tx = } , {ty = }")
-                    print(f":::: {translation[0] = } , {translation[1] = }")
                     raise PluginError(f"Room[{room.roomIndex}]: All MapFloorBoundary planes within a room must have the same X/Y position")
 
             if len(scales) > 0:
