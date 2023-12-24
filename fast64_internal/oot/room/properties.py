@@ -99,7 +99,7 @@ class OOTMinimapFloorProperty(PropertyGroup):
             prop_split(box, self, "floorNum", "Floor Number")
             prop_split(box, self, "mapType", "Minimap Image")
             if getattr(self, "mapType") == "Image":
-                box.label(text="Image must be 96x85 ci4", icon="INFO")
+                box.label(text="Image must be 80x80 ci4", icon="INFO")
                 box.column().template_ID(self, "minimapTex", open="image.open")
 
 
@@ -150,10 +150,6 @@ class OOTRoomHeaderProperty(PropertyGroup):
     bgImageList: CollectionProperty(type=OOTBGProperty)
     bgImageTab: BoolProperty(name="BG Images")
 
-    minimapOffsetX: FloatProperty(name="Offset X", default=0.0)
-    minimapOffsetY: FloatProperty(name="Offset Y", default=0.0)
-    minimapScaleX: FloatProperty(name="Scale X", default=1.0)
-    minimapScaleY: FloatProperty(name="Scale Y", default=1.0)
     minimapFloors: CollectionProperty(type=OOTMinimapFloorProperty)
 
     def drawBGImageList(self, layout: UILayout, objName: str):
@@ -250,11 +246,6 @@ class OOTRoomHeaderProperty(PropertyGroup):
                 minimapBox = layout.column()
                 minimapBox.box().label(text="Minimap Floors")
 
-                prop_split(minimapBox, self, "minimapOffsetX", "Offset X")
-                prop_split(minimapBox, self, "minimapOffsetY", "Offset Y")
-                prop_split(minimapBox, self, "minimapScaleX", "Scale X")
-                prop_split(minimapBox, self, "minimapScaleY", "Scale Y")
-                # prop_split(minimapBox, self, "minimapOffsetX", "Offset X")
                 used_floors = set()
                 for boundary in map_floor_boundaries:
                     used_floors.add(boundary.ootMapFloorBoundaryProperty.floorBelow)

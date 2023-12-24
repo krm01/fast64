@@ -158,8 +158,6 @@ def getMapFloorBoundariesData(outScene: OOTScene, headerIndex: int, level_path=N
         for room, boundaries in itertools.groupby(outScene.mapFloorBoundaries, key=lambda it: it[0])
     }
 
-    print(f"{boundaries_per_room =}")
-
     # clean up any superfluous boundaries
     for room, boundaries in sorted(boundaries_per_room.items(), key=lambda it: it[0]):
         if len(boundaries) > 1:
@@ -167,7 +165,6 @@ def getMapFloorBoundariesData(outScene: OOTScene, headerIndex: int, level_path=N
         else:
             boundaries_per_room[room] = boundaries
 
-    print(f"new: {boundaries_per_room =}")
     listName = f"MinimapRoomData {outScene.mapFloorBoundariesListName(headerIndex)}[{len(boundaries_per_room.keys())}]"
     outData.header = f"extern {listName};\n"
 

@@ -355,6 +355,9 @@ def readRoomData(
     room: OOTRoom,
     roomHeader: OOTRoomHeaderProperty,
     alternateRoomHeaders: OOTAlternateRoomHeaderProperty,
+    sceneObj=None,
+    transformMatrix=None,
+    roomObj=None
 ):
     room.roomIndex = roomHeader.roomIndex
     room.roomBehaviour = getCustomProperty(roomHeader, "roomBehaviour")
@@ -379,10 +382,34 @@ def readRoomData(
     room.disableSunMoon = roomHeader.disableSunMoon
     room.echo = roomHeader.echo
     room.minimapFloors = []
-    room.minimapOffsetX = roomHeader.minimapOffsetX
-    room.minimapOffsetY = roomHeader.minimapOffsetY
-    room.minimapScaleX = roomHeader.minimapScaleX
-    room.minimapScaleY = roomHeader.minimapScaleY
+    if roomObj is not None and transformMatrix is not None and sceneObj is not None:
+        translations = []
+        scales = []
+        for child in roomObj.children:
+            if child.ootEmptyType == "Map Floor Boundary":
+                translation, _, scale, _ = getConvertedTransform(transformMatrix, sceneObj, child, True)
+                translations.append(translation)
+                scales.append(scale)
+        
+        if len(translations) > 0:
+            tx, _, ty = translations[0]
+            for translation in translations:
+                if translation[0] != tx or translation[2] != ty:
+                    print(f":::: {tx = } , {ty = }")
+                    print(f":::: {translation[0] = } , {translation[1] = }")
+                    raise PluginError(f"Room[{room.roomIndex}]: All MapFloorBoundary planes within a room must have the same X/Y position")
+
+            if len(scales) > 0:
+                sx, sy, sz = scales[0]
+                for scale in scales:
+                    if scale[0] != sx or scale[1] != sy or scale[2] != sz:
+                        raise PluginError(f"Room[{room.roomIndex}]: All MapFloorBoundary planes within a room must have the same scale")
+
+            room.minimapOffsetX = translations[0][0]
+            room.minimapOffsetY = translations[0][2]
+            room.minimapScaleX = scales[0][0]
+            room.minimapScaleY = scales[0][1]
+        
     for floor in roomHeader.minimapFloors:
         room.minimapFloors.append([
             floor.floorNum,
@@ -535,7 +562,7 @@ def ootConvertScene(originalSceneObj, transformMatrix, sceneName, DLFormat, conv
                     raise PluginError("Error: room index " + str(roomIndex) + " is used more than once.")
                 processedRooms.add(roomIndex)
                 room = scene.addRoom(roomIndex, sceneName, roomHeader.roomShape)
-                readRoomData(sceneName, room, roomHeader, roomObj.ootAlternateRoomHeaders)
+                readRoomData(sceneName, room, roomHeader, roomObj.ootAlternateRoomHeaders, sceneObj=sceneObj, transformMatrix=transformMatrix, roomObj=roomObj)
 
                 if roomHeader.roomShape == "ROOM_SHAPE_TYPE_IMAGE" and len(roomHeader.bgImageList) < 1:
                     raise PluginError(f'Room {roomObj.name} uses room shape "Image" but doesn\'t have any BG images.')
