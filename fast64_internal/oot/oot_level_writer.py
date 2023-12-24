@@ -57,6 +57,7 @@ from .oot_level_classes import (
     OOTRoom,
     OOTActor,
     OOTTransitionActor,
+    OOTMapChestActor,
     OOTEntrance,
     OOTDLGroup,
     OOTBGImage,
@@ -791,6 +792,22 @@ def ootProcessEmpties(scene: OOTScene, room: OOTRoom, sceneObj, obj, transformMa
                     "actorList",
                     obj.name,
                 )
+                
+                if actorProp.actorID == "ACTOR_EN_BOX":
+                    addActor(
+                        scene,
+                        OOTMapChestActor(
+                            room.index,
+                            int(actorProp.actorParam, 16) & 0x1F,
+                            translation[0],
+                            translation[1],
+                            translation[2],
+                        ),
+                        actorProp,
+                        "mapChestActorList",
+                        obj.name,
+                    )
+                    ...
         elif obj.ootEmptyType == "Transition Actor":
             transActorProp = obj.ootTransitionActorProperty
             if transActorProp.actor.actorID != "None":

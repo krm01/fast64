@@ -249,6 +249,32 @@ def getMapFloorBoundariesData(outScene: OOTScene, headerIndex: int, level_path=N
 
     return outData
 
+
+########################
+# Map Chest Actor List #
+########################
+def getMapChestActorList(outScene: OOTScene, headerIndex: int):
+    outData = CData()
+
+    numChests = len(outScene.mapChestActorList)
+    listName = f"MapChestActorEntry {outScene.mapChestActorListName(headerIndex)}[{numChests}]"
+    outData.header = f"extern {listName};\n"
+
+    outData.source += (
+        listName + " = {\n"
+    )
+
+    for item in sorted(outScene.mapChestActorList, key=lambda it: hash(it)):
+        pos = "{ " + f"{item.x}, {item.y}, {item.z}" + " }"
+        outData.source += (
+            indent + "{" + f"{item.room}, 0x{item.treasureFlag:02x}, {pos}" + "},\n"
+        )
+
+    outData.source += "};\n\n"
+    
+    return outData
+
+
 ################
 # Scene Header #
 ################
@@ -281,6 +307,9 @@ def getHeaderData(header: OOTScene, headerIndex: int, level_path=None):
 
     if len(header.mapFloorBoundaries) > 0:
         headerData.append(getMapFloorBoundariesData(header, headerIndex, level_path=level_path))
+    
+    if len(header.mapChestActorList) > 0:
+        headerData.append(getMapChestActorList(header, headerIndex))
 
     return headerData
 

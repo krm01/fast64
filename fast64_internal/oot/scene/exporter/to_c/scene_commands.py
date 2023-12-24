@@ -80,6 +80,12 @@ def getMapFloorBoundariesCmd(outScene: OOTScene, headerIndex: int):
     return indent + f"SCENE_CMD_UNUSED_02({num_rooms}, {outScene.mapFloorBoundariesListName(headerIndex)})"
 
 
+def getMapChestActorListCmd(outScene: OOTScene, headerIndex: int):
+    return (
+        indent + "SCENE_CMD_MAP_CHEST_ACTOR_LIST("
+    ) + f"{len(outScene.mapChestActorList)}, {outScene.mapChestActorListName(headerIndex)})"
+
+
 def getSceneCommandList(outScene: OOTScene, headerIndex: int):
     cmdListData = CData()
     listName = f"SceneCmd {outScene.sceneName()}_header{headerIndex:02}"
@@ -109,6 +115,9 @@ def getSceneCommandList(outScene: OOTScene, headerIndex: int):
 
     if len(outScene.mapFloorBoundaries) > 0:
         getCmdFunc2ArgList.append(getMapFloorBoundariesCmd)
+    
+    if len(outScene.mapChestActorList) > 0:
+        getCmdFunc2ArgList.append(getMapChestActorListCmd)
 
     sceneCmdData = (
         (outScene.getAltHeaderListCmd(outScene.alternateHeadersName()) if outScene.hasAlternateHeaders() else "")

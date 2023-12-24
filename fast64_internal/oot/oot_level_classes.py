@@ -41,6 +41,18 @@ class OOTTransitionActor:
         self.rotationY = rotationY
 
 
+class OOTMapChestActor:
+    def __init__(self, room, treasureFlag, x, y, z):
+        self.room = room
+        self.treasureFlag = treasureFlag
+        self.x = x
+        self.y = y
+        self.z = z
+    
+    def __hash__(self):
+        return hash(f"{self.room}{self.treasureFlag}{self.x}{self.y}{self.z}")
+
+
 class OOTExit:
     def __init__(self, index):
         self.index = index
@@ -125,6 +137,7 @@ class OOTScene(OOTCommonCommands):
         self.sceneTableEntry = OOTSceneTableEntry()
 
         self.mapFloorBoundaries = []
+        self.mapChestActorList: OOTMapChestActor = set()
 
     def getAlternateHeaderScene(self, name):
         scene = OOTScene(name, self.model)
@@ -172,6 +185,8 @@ class OOTScene(OOTCommonCommands):
     def mapFloorBoundariesListName(self, headerIndex):
         return self.sceneName() + "_header" + format(headerIndex, "02") + "_mapFloorBoundaries"
 
+    def mapChestActorListName(self, headerIndex):
+        return self.sceneName() + "_header" + format(headerIndex, "02") + "_mapChests"
 
     def hasAlternateHeaders(self):
         return not (
