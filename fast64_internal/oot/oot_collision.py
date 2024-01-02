@@ -305,9 +305,13 @@ def ootCollisionToC(collision):
         polygonTypeC = "SurfaceType " + collision.polygonTypesName() + "[] = {\n"
         polygonC = "CollisionPoly " + collision.polygonsName() + "[] = {\n"
         polygonIndex = 0
+        # ordered_polygons = []
+        # ordered_polygons_counter = 0
         for polygonType, polygons in collision.polygonGroups.items():
             polygonTypeC += "\t" + ootPolygonTypeToC(polygonType)
             for polygon in polygons:
+                # ordered_polygons.append((ordered_polygons_counter, polygon))
+                # ordered_polygons_counter += 1
                 polygonC += "\t" + ootCollisionPolygonToC(
                     polygon,
                     polygonType.ignoreCameraCollision,
@@ -323,6 +327,26 @@ def ootCollisionToC(collision):
         data.source += polygonTypeC + polygonC
         polygonTypesName = collision.polygonTypesName()
         polygonsName = collision.polygonsName()
+
+        # from .kdtree import KDNode
+        # from ..utility import indent
+
+        # tree = KDNode.construct_tree(ordered_polygons, collision.vertices)
+        # # tree.show()
+        # indicesMap, nodeTypeName, nodeList = tree.to_c_parts(ordered_polygons, collision.ownerName)
+        # for indices_name, indices_values in indicesMap.items():
+        #     data.header += f"extern s16 {indices_name}[{len(indices_values)}];\n"
+        #     data.source += (
+        #         f"s16 {indices_name}[{len(indices_values)}] = "
+        #         + "{ " + ",".join(str(it) for it in indices_values) + " };\n"
+        #     )
+        # data.source += "\n"
+        # data.header += f"extern KDNode {nodeTypeName}[{len(nodeList)}];\n"
+        # data.source += (
+        #     f"KDNode {nodeTypeName}[{len(nodeList)}] = " + "{\n"
+        #     + "".join(f"/* {idx:03} */ {indent}{it.to_c_str()},\n" for idx, it in enumerate(nodeList))
+        #     + "};\n\n"
+        # )
     else:
         polygonTypesName = "0"
         polygonsName = "0"
@@ -386,6 +410,9 @@ def ootCollisionToC(collision):
         + ",\n"
         + "\t"
         + waterBoxesName
+        # + waterBoxesName + ",\n"
+        # + f"\t{len(nodeList)},\n"
+        # + f"\t&{nodeTypeName},\n"
         + "\n"
         + "};\n\n"
     )
