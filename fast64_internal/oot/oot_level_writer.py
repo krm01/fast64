@@ -389,7 +389,10 @@ def readRoomData(
             if child.ootEmptyType == "Map Floor Boundary":
                 translation, _, scale, _ = getConvertedTransform(transformMatrix, sceneObj, child, True)
                 translations.append(translation)
-                scales.append(child.scale)
+                print(f":::: {room.roomIndex = }, {scale = }, {child.scale = }, {child.empty_display_size}")
+                # 5.0 is the default "empty display size" so if that changes we have to normalize
+                # back to that so the final scale is correct
+                scales.append(scale / ((5.0 * bpy.context.scene.ootBlenderScale) / child.empty_display_size))
         
         if len(translations) > 0:
             tx, _, ty = translations[0]
