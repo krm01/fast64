@@ -37,7 +37,7 @@ def getActorList(outRoom: OOTRoom, headerIndex: int):
     # .c
     actorList.source = (
         (f"{listName}[{outRoom.getActorLengthDefineName(headerIndex)}]" + " = {\n")
-        + "\n".join(getActorEntry(actor) for actor in outRoom.actorList)
+        + "\n".join(getActorEntry(actor) for actor in sorted(outRoom.actorList))
         + "};\n\n"
     )
 
@@ -80,7 +80,7 @@ def getTransitionActorList(outScene: OOTScene, headerIndex: int):
     # .c
     transActorList.source = (
         (f"{listName}[]" + " = {\n")
-        + "\n".join(getTransitionActorEntry(transActor) for transActor in outScene.transitionActorList)
+        + "\n".join(getTransitionActorEntry(transActor) for transActor in sorted(outScene.transitionActorList))
         + "};\n\n"
     )
 

@@ -27,6 +27,12 @@ class OOTActor:
         self.position = position
         self.rotation = rotation
 
+    def __hash__(self):
+        return hash("|".join(str(it) for it in dir(self)))
+    
+    def __lt__(self, other):
+        return hash(self) < hash(other)
+
 
 class OOTTransitionActor:
     def __init__(self, actorName, actorID, frontRoom, backRoom, frontCam, backCam, position, rotationY, actorParam):
@@ -39,6 +45,12 @@ class OOTTransitionActor:
         self.backCam = backCam
         self.position = position
         self.rotationY = rotationY
+
+    def __hash__(self):
+        return hash("|".join(str(it) for it in dir(self)))
+    
+    def __lt__(self, other):
+        return hash(self) < hash(other)
 
 
 class OOTMapChestActor:
