@@ -389,7 +389,6 @@ def readRoomData(
             if child.ootEmptyType == "Map Floor Boundary":
                 translation, _, scale, _ = getConvertedTransform(transformMatrix, sceneObj, child, True)
                 translations.append(translation)
-                print(f":::: {room.roomIndex = }, {scale = }, {child.scale = }, {child.empty_display_size}")
                 # 5.0 is the default "empty display size" so if that changes we have to normalize
                 # back to that so the final scale is correct
                 scales.append(scale / ((5.0 * bpy.context.scene.ootBlenderScale) / child.empty_display_size))
@@ -584,8 +583,17 @@ def ootConvertScene(originalSceneObj, transformMatrix, sceneName, DLFormat, conv
                 room.mesh.removeUnusedEntries()
                 ootProcessEmpties(scene, room, sceneObj, roomObj, transformMatrix)
             elif obj.data is None and obj.ootEmptyType == "Water Box":
-                # 0x3F = -1 in 6bit value
-                ootProcessWaterBox(sceneObj, obj, transformMatrix, scene, 0x3F)
+                waterbox_parent = obj.parent
+                is_scene_waterbox = True
+                while waterbox_parent is not None:
+                    if waterbox_parent.ootEmptyType == "Room":
+                        is_scene_waterbox = False
+                        break
+                    waterbox_parent = waterbox_parent.parent
+
+                if is_scene_waterbox:
+                    # 0x3F = -1 in 6bit value
+                    ootProcessWaterBox(sceneObj, obj, transformMatrix, scene, 0x3F)
             elif isinstance(obj.data, bpy.types.Camera):
                 camPosProp = obj.ootCameraPositionProperty
                 readCamPos(camPosProp, obj, scene, sceneObj, transformMatrix)
